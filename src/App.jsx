@@ -898,25 +898,47 @@ function LiveCallScreen({ scenario, user, onEnd }) {
     const reply = await getAIResponse(transcript);
     setMessages(prev => [...prev, { from: "prospect", text: reply, ts: fmt(duration) }]);
     setIsSpeaking(false);
-    if (micOn) setTimeout(startListening, 1000);
+if (micOn) setTimeout(() => startListening(), 600);
   }
-
-  function startListening() {
+ function startListening() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return;
     const r = new SR();
-    r.continuous = false; r.interimResults = true; r.lang = "en-US";
+    r.continuous = true; r.interimResults = true; r.lang = "en-US";
     recognitionRef.current = r;
+    let silenceTimer = null;
+    let finalTranscriptBuffer = "";
+
     r.onstart = () => setIsListening(true);
     r.onresult = e => {
       let interim = "", final = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) { if (e.results[i].isFinal) final += e.results[i][0].transcript; else interim += e.results[i][0].transcript; }
-      setCurrentTranscript(interim || final);
-      if (final) handleUserSpeech(final);
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) final += e.results[i][0].transcript;
+        else interim += e.results[i][0].transcript;
+      }
+      if (final) finalTranscriptBuffer += final;
+      setCurrentTranscript(finalTranscriptBuffer + interim);
+
+      if (silenceTimer) clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => {
+        if (finalTranscriptBuffer.trim()) {
+          const toSend = finalTranscriptBuffer.trim();
+          finalTranscriptBuffer = "";
+          handleUserSpeech(toSend);
+        }
+      }, 1200);
     };
-    r.onerror = () => setIsListening(false);
-    r.onend = () => setIsListening(false);
-    r.start();
+    r.onerror = (e) => {
+      if (e.error !== "no-speech") setIsListening(false);
+    };
+    r.onend = () => {
+      if (recognitionRef.current === r && micOn && !isSpeaking) {
+        try { r.start(); } catch (err) {}
+      } else {
+        setIsListening(false);
+      }
+  };
+   try { r.start(); } catch (e) {}
   }
 
   function stopListening() { if (recognitionRef.current) { recognitionRef.current.stop(); recognitionRef.current = null; } setIsListening(false); }
