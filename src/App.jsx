@@ -546,8 +546,8 @@ function ManagerDashboard({ user, onSignOut }) {
     setLoadingReport(true);
     const teamData = team.map(r => repAvg(r) + " avg - " + r.name + " - " + r.sessions.length + " sessions").join(", ");
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST", headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
+      const res = await fetch("/api/claude", {
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 600, system: "VP of Sales writing a concise team performance summary. Direct and actionable. Plain text.", messages: [{ role: "user", content: "Write a 3 paragraph team coaching summary based on: " + teamData + ". Cover overall health, who needs help, top 2 priorities." }] })
       });
       const data = await res.json();
@@ -748,8 +748,8 @@ function AssignMissionModal({ rep, onClose, onAssign }) {
   const generateNote = async () => {
     setGenerating(true);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST", headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
+      const res = await fetch("/api/claude", {
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 150, system: "Write a short coaching note from a sales manager to a rep assigning practice. Under 60 words. Direct and encouraging.", messages: [{ role: "user", content: "Write a coaching note assigning a " + stage + " practice call with a " + ICP_AVATARS[icp].title + " at a " + COMPANY_SIZES[companySize] + " company to rep named " + rep.name.split(" ")[0] + "." }] })
       });
       const data = await res.json();
@@ -810,8 +810,8 @@ function KnowledgeBase() {
     if (!transcripts.trim()) return;
     setProcessing(true);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST", headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
+      const res = await fetch("/api/claude", {
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 800, system: "Extract sales intelligence from call transcripts. Return plain text with sections: TALK TRACKS, OBJECTION HANDLERS, PRICING RESPONSES, KEY INSIGHTS.", messages: [{ role: "user", content: "Analyze these transcripts and extract key sales intelligence:\n\n" + transcripts }] })
       });
       const data = await res.json();
@@ -882,7 +882,7 @@ function LiveCallScreen({ scenario, user, onEnd }) {
   async function getAIResponse(userText) {
     conversationRef.current.push({ role: "user", content: userText });
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 200, system: buildPrompt(), messages: conversationRef.current }) });
+      const res = await fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 200, system: buildPrompt(), messages: conversationRef.current }) });
       const data = await res.json();
       const reply = data.content && data.content.map(b => b.text || "").join("") || "Sorry, can you repeat that?";
       conversationRef.current.push({ role: "assistant", content: reply });
@@ -1084,7 +1084,7 @@ export default function App() {
     setScreen("analyzing");
     let parsed;
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1200, system: "Senior sales coach. Return ONLY valid JSON, no markdown.", messages: [{ role: "user", content: "Analyze this " + scen.stage + " call. Return JSON: {\"overallScore\":<0-100>,\"passed\":<bool>,\"categories\":{\"rapport\":<0-100>,\"discovery\":<0-100>,\"productKnowledge\":<0-100>,\"objectionHandling\":<0-100>,\"closing\":<0-100>},\"strengths\":[\"str1\",\"str2\"],\"improvements\":[\"imp1\",\"imp2\"],\"bestMoment\":\"<text>\",\"missedOpportunity\":\"<text>\",\"coachSummary\":\"<2-3 sentences>\"}\n\nTranscript:\n" + transcript }] }) });
+      const res = await fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1200, system: "Senior sales coach. Return ONLY valid JSON, no markdown.", messages: [{ role: "user", content: "Analyze this " + scen.stage + " call. Return JSON: {\"overallScore\":<0-100>,\"passed\":<bool>,\"categories\":{\"rapport\":<0-100>,\"discovery\":<0-100>,\"productKnowledge\":<0-100>,\"objectionHandling\":<0-100>,\"closing\":<0-100>},\"strengths\":[\"str1\",\"str2\"],\"improvements\":[\"imp1\",\"imp2\"],\"bestMoment\":\"<text>\",\"missedOpportunity\":\"<text>\",\"coachSummary\":\"<2-3 sentences>\"}\n\nTranscript:\n" + transcript }] }) });
       const data = await res.json();
       parsed = JSON.parse(data.content.map(b => b.text || "").join("").replace(/```json|```/g, "").trim());
     } catch (e) {
